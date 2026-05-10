@@ -1,0 +1,65 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+.DS_Store
+
+/private/tmp/
+
+ARCHIVE/runtime_snapshots/*.tar.gz
+VALIDATION/results/*.tar.gz
+
+.env
+venv/
+.venv/
+
+*.logo
+
+*.png
+*.jpg
+*.jpeg
+*.dmg
+
+Renders/
+Visualizations/
+
+# Large generated data
+*.npy
+*.npz
+*.pkl
+*.csv
+
+# Videos / animations
+*.mp4
+*.gif
+*.mov
+
+# Archives
+*.zip
+*.tar.gz
+
+# Large notebooks
+*.ipynb
+
+# PDFs and docs (optional later)
+# *.pdf
+# *.docx
+
+# External repos
+Benchmarks/quantum-measurement-stack-demo/
+Benchmarks/quantum-measurement-stack/
+Diagnostics/detector-plane-imaging/
+EXTERNAL/PyOCT/
+
+# Generated field outputs
+Foundations/ImprintField/ImprintFieldOutputs/
+Foundations/ImprintField/ImprintFieldOutputs_snapshots/
+Foundations/ImprintField/ImprintFieldOutputs_withDetectors/
+Foundations/ImprintField/ImprintField_Higgs_visuals/
+Foundations/ImprintField/ImprintField_phi4/
+Foundations/ImprintField/ImprintField_phi4_7p8/
+Foundations/ImprintField/ImprintField_phi4_fixed/
+Foundations/ImprintField/ImprintField_phi4_regen/
+Foundations/ImprintField/ImprintField_phi4_visuals/
+Foundations/ImprintField/ImprintField_Videos_Public/
