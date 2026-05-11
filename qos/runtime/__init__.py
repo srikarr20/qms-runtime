@@ -1,13 +1,11 @@
-"""Quantum Measurement Stack (QMS)
+"""Canonical runtime orchestration layer."""
 
-Canonical operational runtime architecture
-for detector-conditioned observability
-in coherence-sensitive systems.
-"""
-
-from .runtime import (
+from .orchestrator import (
     RuntimeExecution,
     RuntimeOrchestrator,
+)
+
+from .sdk_runtime import (
     SDKExecutionSummary,
     SDKRuntime,
 )

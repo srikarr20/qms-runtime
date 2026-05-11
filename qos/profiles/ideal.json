@@ -1,0 +1,6 @@
+{
+    "name": "ideal",
+    "sigma": 0.0,
+    "noise_std": 0.0,
+    "bin_factor": 1
+}

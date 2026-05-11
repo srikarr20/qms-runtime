@@ -1,0 +1,6 @@
+{
+    "name": "coarse_acquisition",
+    "sigma": 40.0,
+    "noise_std": 0.35,
+    "bin_factor": 8
+}

@@ -63,3 +63,16 @@ Foundations/ImprintField/ImprintField_phi4_fixed/
 Foundations/ImprintField/ImprintField_phi4_regen/
 Foundations/ImprintField/ImprintField_phi4_visuals/
 Foundations/ImprintField/ImprintField_Videos_Public/
+
+
+# QOS runtime artifacts
+qos/artifacts/generated/runtime/*
+qos/artifacts/generated/stream/*
+qos/artifacts/generated/evolve/*
+qos/artifacts/generated/adaptive/*
+
+# Python packaging
+*.egg-info/
+
+# Local runtime cache
+.qos_cache/

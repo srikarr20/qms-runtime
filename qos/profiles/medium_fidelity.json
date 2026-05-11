@@ -1,0 +1,6 @@
+{
+    "name": "medium_fidelity",
+    "sigma": 12.0,
+    "noise_std": 0.10,
+    "bin_factor": 4
+}
