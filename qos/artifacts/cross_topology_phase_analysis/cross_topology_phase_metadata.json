@@ -1,0 +1,10 @@
+{
+    "topologies": [
+        "ring",
+        "line",
+        "random",
+        "fully_connected"
+    ],
+    "runtime_steps": 180,
+    "detector_count": 12
+}

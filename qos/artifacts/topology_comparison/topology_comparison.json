@@ -1,0 +1,30 @@
+{
+    "ring": {
+        "propagation_velocity": 3547.211534585901,
+        "detector_variance": 4.308356918727625e-22,
+        "coherence_survival": 0.8201235324962611,
+        "fidelity_survival": 0.9999999999951764,
+        "saturation_index": 0.06074041714058361
+    },
+    "line": {
+        "propagation_velocity": 3547.211534585901,
+        "detector_variance": 4.308356918727625e-22,
+        "coherence_survival": 0.8201235324962611,
+        "fidelity_survival": 0.9999999999951764,
+        "saturation_index": 0.06074041714058361
+    },
+    "random": {
+        "propagation_velocity": 3578.499969251911,
+        "detector_variance": 3.4314941577799334e-22,
+        "coherence_survival": 0.8206039083981583,
+        "fidelity_survival": 0.999999999995043,
+        "saturation_index": 0.06074041822823753
+    },
+    "fully_connected": {
+        "propagation_velocity": 3547.2115345858947,
+        "detector_variance": 3.865076035981353e-22,
+        "coherence_survival": 0.8201235324962611,
+        "fidelity_survival": 0.9999999999950513,
+        "saturation_index": 0.06074041714058361
+    }
+}

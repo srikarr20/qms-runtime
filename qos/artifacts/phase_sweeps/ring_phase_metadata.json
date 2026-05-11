@@ -1,0 +1,5 @@
+{
+    "topology": "ring",
+    "runtime_steps": 180,
+    "detector_count": 12
+}

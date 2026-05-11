@@ -4,20 +4,8 @@ from qos.runtime.runtime_tensor import (
     RuntimeTensor,
 )
 
-from qos.runtime.field_runtime import (
-    FieldRuntime,
-)
-
-from qos.runtime.detector_runtime import (
-    DetectorRuntime,
-)
-
-from qos.runtime.scheduler_runtime import (
-    SchedulerRuntime,
-)
-
-from qos.runtime.memory_runtime import (
-    MemoryRuntime,
+from qos.runtime.topology_runtime import (
+    TopologyRuntime,
 )
 
 
@@ -27,45 +15,44 @@ class RuntimeExecution:
 
         self,
 
-        runtime_steps=240,
+        runtime_steps=120,
+
+        detector_count=8,
+
+        topology="ring",
+
+        pulse_sites=None,
+
+        pulse_amplitudes=None,
 
     ):
 
-        self.runtime_steps = (
-            runtime_steps
+        self.runtime_steps = runtime_steps
+
+        self.detector_count = detector_count
+
+        self.topology = topology
+
+        self.pulse_sites = (
+            pulse_sites
+            or [0]
         )
 
-        self.field_runtime = (
-            FieldRuntime()
+        self.pulse_amplitudes = (
+            pulse_amplitudes
+            or [1.0]
         )
 
-        self.detector_runtime = (
-            DetectorRuntime()
+        self.topology_runtime = (
+            TopologyRuntime(
+
+                topology=topology,
+
+                detector_count=
+                detector_count,
+
+            )
         )
-
-        self.scheduler_runtime = (
-            SchedulerRuntime()
-        )
-
-        self.memory_runtime = (
-            MemoryRuntime()
-        )
-
-        self.environmental_loss = (
-            0.05
-        )
-
-        self.detector_loss = (
-            0.05
-        )
-
-        self.noise_floor = (
-            0.001
-        )
-
-        self.field_history = []
-
-        self.runtime_tensor = []
 
     # ======================================================
     # EXECUTE
@@ -73,143 +60,180 @@ class RuntimeExecution:
 
     def execute(self):
 
-        for runtime_step in range(
-            self.runtime_steps
+        field_history = []
+
+        runtime_tensor = []
+
+        detector_states = np.zeros(
+            self.detector_count
+        )
+
+        memory_states = np.zeros(
+            self.detector_count
+        )
+
+        # ==============================================
+        # MULTI-PULSE INJECTION
+        # ==============================================
+
+        for location, amplitude in zip(
+
+            self.pulse_sites,
+
+            self.pulse_amplitudes,
+
         ):
 
-            field = (
-                self.field_runtime
-                .evolve_field(
-                    runtime_step
+            detector_states = (
+
+                self.topology_runtime.inject_pulse(
+
+                    detector_states,
+
+                    location=location,
+
+                    amplitude=amplitude,
+
+                )
+
+            )
+
+        # ==============================================
+        # RUNTIME LOOP
+        # ==============================================
+
+        for step in range(
+
+            self.runtime_steps
+
+        ):
+
+            detector_states = (
+                self.topology_runtime.propagate(
+
+                    detector_states
                 )
             )
 
-            observability = np.mean(
-                np.abs(field)
+            # ==========================================
+            # MEMORY EVOLUTION
+            # ==========================================
+
+            memory_states = (
+
+                0.97 * memory_states
+
+                +
+
+                0.03 * detector_states
+
             )
 
-            coherence = np.std(
-                field
-            )
+            coherence = float(
 
-            self.detector_runtime.update(
-                observability
-            )
+                np.exp(
 
-            self.memory_runtime.update(
-                self.detector_runtime
-                .detector_states
-            )
+                    -np.var(
+                        detector_states
+                    )
 
-            coupling = (
-                self.detector_runtime
-                .coupling_mask(
-                    self.field_runtime.x
                 )
-            )
-
-            field *= coupling
-
-            field *= (
-                1
-                - self.environmental_loss
-            )
-
-            field *= (
-                1
-                - self.detector_loss
-            )
-
-            field += np.random.normal(
-
-                0,
-
-                self.noise_floor,
-
-                size=field.shape,
 
             )
 
-            self.field_history.append(
-                field.copy()
+            fidelity = float(
+
+                1.0
+                /
+                (
+                    1.0
+                    +
+                    np.mean(
+                        np.abs(
+                            detector_states
+                        )
+                    )
+                )
+
             )
 
             tensor = RuntimeTensor(
 
-                runtime_step=runtime_step,
+                runtime_step=step,
 
-                coherence=float(
-                    coherence
-                ),
+                detector_states=
+                detector_states.tolist(),
 
-                fidelity=float(
-                    observability
-                ),
+                coherence=
+                coherence,
 
-                noise=float(
-                    self.noise_floor
-                ),
+                fidelity=
+                fidelity,
+
+                noise=0.0,
 
                 detector_loss=float(
-                    self.detector_loss
+
+                    np.mean(
+                        np.abs(
+                            detector_states
+                        )
+                    )
+
                 ),
 
                 environmental_loss=float(
-                    self.environmental_loss
+
+                    1.0 - coherence
+
                 ),
 
-                detector_states=(
-                    self.detector_runtime
-                    .detector_states
-                    .tolist()
-                ),
+                memory_states=
+                memory_states.tolist(),
 
-                memory_states=(
-                    self.detector_runtime
-                    .detector_memory
-                    .tolist()
-                ),
+                scheduler_windows=[
 
-                scheduler_windows=(
-                    self.scheduler_runtime
-                    .detector_windows
-                    .tolist()
-                ),
+                    step,
 
-                scheduler_latency=(
-                    self.scheduler_runtime
-                    .detector_latency
-                    .tolist()
-                ),
+                    step + 1,
 
-                topology_state={
+                ],
 
-                    "detector_positions":
+                scheduler_latency=0.0,
 
-                        self.detector_runtime
-                        .detector_positions
-
-                },
+                topology_state=
+                self.topology_runtime.metrics(),
 
                 metadata={
 
-                    "runtime_type":
-                        "RuntimeExecution"
+                    "runtime_step":
+                    step,
+
+                    "topology":
+                    self.topology,
+
+                    "pulse_sites":
+                    self.pulse_sites,
+
+                    "pulse_amplitudes":
+                    self.pulse_amplitudes,
 
                 },
 
             )
 
-            self.runtime_tensor.append(
-                tensor.to_dict()
+            runtime_tensor.append(
+                tensor
+            )
+
+            field_history.append(
+                detector_states.copy()
             )
 
         return (
 
-            np.array(
-                self.field_history
-            ),
+            field_history,
 
-            self.runtime_tensor,
+            runtime_tensor,
 
         )
