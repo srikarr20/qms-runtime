@@ -1,0 +1,42 @@
+=== QOS Runtime Analytics ===
+
+
+PROFILE: ideal_runtime
+fidelity_stability: 0.996217
+coherence_persistence: 0.628932
+detector_convergence: 0.999991
+memory_persistence: 1.000000
+runtime_stability: 0.998483
+runtime_score: 0.924725
+
+PROFILE: medium_runtime
+fidelity_stability: 0.969503
+coherence_persistence: 0.455085
+detector_convergence: 0.999991
+memory_persistence: 1.000000
+runtime_stability: 0.995617
+runtime_score: 0.884039
+
+PROFILE: noisy_runtime
+fidelity_stability: 0.940014
+coherence_persistence: 0.268221
+detector_convergence: 0.999991
+memory_persistence: 0.977136
+runtime_stability: 0.993546
+runtime_score: 0.835781
+
+PROFILE: collapse_runtime
+fidelity_stability: 0.951260
+coherence_persistence: 0.098144
+detector_convergence: 0.999991
+memory_persistence: 0.444516
+runtime_stability: 0.992913
+runtime_score: 0.697364
+
+PROFILE: adaptive_runtime
+fidelity_stability: 0.945447
+coherence_persistence: 0.314603
+detector_convergence: 1.000000
+memory_persistence: 1.000000
+runtime_stability: 0.995454
+runtime_score: 0.851101

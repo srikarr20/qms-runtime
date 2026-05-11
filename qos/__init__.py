@@ -1,20 +1,27 @@
-"""Quantum Measurement Stack (QMS)
+from qos.runtime import (
 
-Canonical operational runtime architecture
-for detector-conditioned observability
-in coherence-sensitive systems.
-"""
+    RuntimeTensor,
 
-from .runtime import (
     RuntimeExecution,
-    RuntimeOrchestrator,
-    SDKExecutionSummary,
-    SDKRuntime,
+
+    RuntimeSnapshot,
+
+    ReplayRuntime,
+
+    RuntimeValidator,
+
 )
 
-__all__ = (
+__all__ = [
+
+    "RuntimeTensor",
+
     "RuntimeExecution",
-    "RuntimeOrchestrator",
-    "SDKExecutionSummary",
-    "SDKRuntime",
-)
+
+    "RuntimeSnapshot",
+
+    "ReplayRuntime",
+
+    "RuntimeValidator",
+
+]

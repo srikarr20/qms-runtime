@@ -1,0 +1,11 @@
+{
+    "runtime_steps": 240,
+
+    "coherence_decay": 0.996,
+
+    "environmental_loss": 0.05,
+
+    "detector_loss": 0.05,
+
+    "noise_floor": 0.001
+}
