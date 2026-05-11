@@ -1,333 +1,47 @@
 import argparse
 import json
-from pathlib import Path
+
 from datetime import datetime
 
+from pathlib import Path
+
 import numpy as np
+
 import matplotlib.pyplot as plt
 
-from scipy.ndimage import gaussian_filter
 
-from qos.foundation.dynamic_field_engine import (
-    ImprintFieldEngine,
+from qos.foundation.detector_network_field_engine import (
+    DetectorNetworkFieldEngine,
+)
+
+from qos.foundation.memory_detector_network_engine import (
+    MemoryDetectorNetworkEngine,
 )
 
 
-# ---------------------------------------------------
-# SIGNAL GENERATION
-# ---------------------------------------------------
+# ============================================================
+# DETECTOR NETWORK
+# ============================================================
 
-def interference_pattern(
-    n=2048,
-    period=40,
-    visibility=0.98,
-):
+def run_detector_network():
 
-    x = np.arange(n)
-
-    signal = (
-        1.0
-        + visibility
-        * np.cos(
-            2 * np.pi * x / period
-        )
+    engine = (
+        DetectorNetworkFieldEngine()
     )
-
-    return signal
-
-
-# ---------------------------------------------------
-# ACQUISITION MODEL
-# ---------------------------------------------------
-
-def acquire(
-    signal,
-    sigma=0.0,
-    noise_std=0.0,
-    bin_factor=1,
-):
-
-    acquired = (
-        gaussian_filter(
-            signal,
-            sigma=sigma,
-        )
-        if sigma > 0
-        else signal.copy()
-    )
-
-    if noise_std > 0:
-
-        acquired += np.random.normal(
-            0,
-            noise_std,
-            acquired.shape,
-        )
-
-    if bin_factor > 1:
-
-        n_bins = (
-            len(acquired)
-            // bin_factor
-        )
-
-        acquired = (
-            acquired[
-                : n_bins * bin_factor
-            ]
-            .reshape(
-                n_bins,
-                bin_factor,
-            )
-            .mean(axis=1)
-        )
-
-    return acquired
-
-
-# ---------------------------------------------------
-# METRICS
-# ---------------------------------------------------
-
-def fringe_visibility(signal):
-
-    signal = np.asarray(signal)
-
-    p95 = np.percentile(signal, 95)
-
-    p5 = np.percentile(signal, 5)
-
-    return (
-        p95 - p5
-    ) / (
-        p95 + p5 + 1e-8
-    )
-
-
-def spectral_coherence(signal):
-
-    signal = np.asarray(signal)
-
-    fft = np.abs(
-        np.fft.rfft(signal)
-    )
-
-    fft[0] = 0.0
-
-    peak = fft.max()
-
-    mean_background = (
-        np.mean(fft)
-        + 1e-8
-    )
-
-    return peak / mean_background
-
-
-def signal_to_noise(signal):
-
-    signal = np.asarray(signal)
-
-    mean_signal = np.mean(signal)
-
-    std_signal = (
-        np.std(signal)
-        + 1e-8
-    )
-
-    return mean_signal / std_signal
-
-
-def detector_fidelity(signal):
-
-    fv = fringe_visibility(signal)
-
-    sc = spectral_coherence(signal)
-
-    snr = signal_to_noise(signal)
-
-    normalized_sc = min(
-        sc / 20.0,
-        1.0,
-    )
-
-    normalized_snr = min(
-        snr / 10.0,
-        1.0,
-    )
-
-    fidelity = (
-        0.5 * fv
-        + 0.3 * normalized_sc
-        + 0.2 * normalized_snr
-    )
-
-    return {
-        "fringe_visibility":
-            float(fv),
-
-        "spectral_coherence":
-            float(sc),
-
-        "signal_to_noise":
-            float(snr),
-
-        "detector_fidelity":
-            float(fidelity),
-    }
-
-
-# ---------------------------------------------------
-# PROFILE MODE
-# ---------------------------------------------------
-
-def run_profile(profile_name):
-
-    profile_path = (
-        Path("qos/profiles")
-        / f"{profile_name}.json"
-    )
-
-    if not profile_path.exists():
-
-        print(
-            f"Profile not found: "
-            f"{profile_path}"
-        )
-
-        return
-
-    with open(profile_path) as f:
-
-        profile = json.load(f)
-
-    signal = interference_pattern()
-
-    acquired = acquire(
-        signal,
-        sigma=profile["sigma"],
-        noise_std=profile["noise_std"],
-        bin_factor=profile["bin_factor"],
-    )
-
-    diagnostics = detector_fidelity(
-        acquired
-    )
-
-    fidelity = diagnostics[
-        "detector_fidelity"
-    ]
-
-    timestamp = datetime.utcnow().strftime(
-        "%Y%m%d_%H%M%S"
-    )
-
-    artifact_dir = (
-        Path(
-            "qos/artifacts/generated/runtime"
-        )
-        / f"profile_{timestamp}"
-    )
-
-    artifact_dir.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    metrics = {
-        "profile":
-            profile_name,
-
-        "diagnostics":
-            diagnostics,
-    }
-
-    with open(
-        artifact_dir / "metrics.json",
-        "w",
-    ) as f:
-
-        json.dump(
-            metrics,
-            f,
-            indent=4,
-        )
-
-    plt.figure(figsize=(12, 6))
-
-    plt.plot(
-        signal,
-        label="Ideal",
-        linewidth=2,
-    )
-
-    plt.plot(
-        acquired,
-        label=f"{profile_name} ({fidelity:.2f})",
-        alpha=0.8,
-    )
-
-    plt.title(
-        f"QMS Runtime Profile: {profile_name}"
-    )
-
-    plt.xlabel(
-        "Detector Coordinate"
-    )
-
-    plt.ylabel(
-        "Intensity"
-    )
-
-    plt.legend()
-
-    plt.tight_layout()
-
-    plt.savefig(
-        artifact_dir / "dashboard.png",
-        dpi=300,
-    )
-
-    print(
-        "\n=== QMS Runtime Artifact ==="
-    )
-
-    print(
-        f"Profile: {profile_name}"
-    )
-
-    print(
-        f"Detector Fidelity: {fidelity:.4f}"
-    )
-
-    print(
-        f"Artifacts: {artifact_dir}"
-    )
-
-    plt.show()
-
-
-# ---------------------------------------------------
-# EVOLUTION MODE
-# ---------------------------------------------------
-
-def run_evolve():
-
-    engine = ImprintFieldEngine()
 
     history, tensor = (
         engine.evolve()
     )
 
     fig, axes = plt.subplots(
-        2,
+        3,
         1,
-        figsize=(14, 10),
+        figsize=(14, 14),
     )
 
-    # -----------------------------------
-    # FIELD EVOLUTION
-    # -----------------------------------
+    # ========================================================
+    # PANEL 1
+    # ========================================================
 
     im = axes[0].imshow(
         history,
@@ -336,7 +50,7 @@ def run_evolve():
     )
 
     axes[0].set_title(
-        "Persistent Imprint Field Evolution"
+        "Detector Network Runtime"
     )
 
     axes[0].set_xlabel(
@@ -353,9 +67,9 @@ def run_evolve():
         label="Field Amplitude",
     )
 
-    # -----------------------------------
-    # RUNTIME FIDELITY TENSOR
-    # -----------------------------------
+    # ========================================================
+    # PANEL 2
+    # ========================================================
 
     fidelity = [
         x["fidelity"]
@@ -384,36 +98,36 @@ def run_evolve():
 
     axes[1].plot(
         fidelity,
-        label="Detector Fidelity",
         linewidth=2,
+        label="Detector Fidelity",
     )
 
     axes[1].plot(
         coherence,
-        label="Coherence",
         linewidth=2,
+        label="Coherence",
     )
 
     axes[1].plot(
         detector_loss,
-        label="Detector Loss",
         linewidth=2,
+        label="Detector Loss",
     )
 
     axes[1].plot(
         environmental_loss,
-        label="Environmental Loss",
         linewidth=2,
+        label="Environmental Loss",
     )
 
     axes[1].plot(
         noise,
-        label="Noise",
         linewidth=2,
+        label="Noise",
     )
 
     axes[1].set_title(
-        "Runtime Fidelity Tensor"
+        "Network Runtime Tensor"
     )
 
     axes[1].set_xlabel(
@@ -428,11 +142,48 @@ def run_evolve():
 
     axes[1].grid(True)
 
+    # ========================================================
+    # PANEL 3
+    # ========================================================
+
+    detector_states = np.array(
+        [
+            x["detector_states"]
+            for x in tensor
+        ]
+    )
+
+    for i in range(
+        detector_states.shape[1]
+    ):
+
+        axes[2].plot(
+            detector_states[:, i],
+            linewidth=2,
+            label=f"Detector {i+1}",
+        )
+
+    axes[2].set_title(
+        "Detector Network States"
+    )
+
+    axes[2].set_xlabel(
+        "Runtime Step"
+    )
+
+    axes[2].set_ylabel(
+        "Detector Coupling State"
+    )
+
+    axes[2].legend()
+
+    axes[2].grid(True)
+
     plt.tight_layout()
 
-    # -----------------------------------
-    # SAVE ARTIFACTS
-    # -----------------------------------
+    # ========================================================
+    # SAVE
+    # ========================================================
 
     timestamp = datetime.utcnow().strftime(
         "%Y%m%d_%H%M%S"
@@ -442,7 +193,7 @@ def run_evolve():
         Path(
             "qos/artifacts/generated/runtime"
         )
-        / f"evolve_{timestamp}"
+        / f"detector_network_{timestamp}"
     )
 
     artifact_dir.mkdir(
@@ -452,21 +203,32 @@ def run_evolve():
 
     plt.savefig(
         artifact_dir
-        / "field_evolution.png",
+        / "detector_network.png",
         dpi=300,
     )
 
     metrics = {
+
         "runtime_tensor":
             tensor,
 
-        "shape":
+        "field_shape":
             list(history.shape),
+
+        "final_fidelity":
+            float(
+                fidelity[-1]
+            ),
+
+        "final_coherence":
+            float(
+                coherence[-1]
+            ),
     }
 
     with open(
         artifact_dir
-        / "runtime_tensor.json",
+        / "detector_network_tensor.json",
         "w",
     ) as f:
 
@@ -477,7 +239,7 @@ def run_evolve():
         )
 
     print(
-        "\n=== QMS Field Evolution ==="
+        "\n=== Detector Network Runtime ==="
     )
 
     print(
@@ -487,57 +249,252 @@ def run_evolve():
     plt.show()
 
 
-# ---------------------------------------------------
-# CLI
-# ---------------------------------------------------
+# ============================================================
+# MEMORY NETWORK
+# ============================================================
+
+def run_memory_network():
+
+    engine = (
+        MemoryDetectorNetworkEngine()
+    )
+
+    history, tensor = (
+        engine.evolve()
+    )
+
+    fig, axes = plt.subplots(
+        4,
+        1,
+        figsize=(14, 18),
+    )
+
+    # ========================================================
+    # PANEL 1
+    # ========================================================
+
+    im = axes[0].imshow(
+        history,
+        aspect="auto",
+        origin="lower",
+    )
+
+    axes[0].set_title(
+        "Memory Detector Runtime"
+    )
+
+    axes[0].set_xlabel(
+        "Spatial Coordinate"
+    )
+
+    axes[0].set_ylabel(
+        "Runtime Step"
+    )
+
+    fig.colorbar(
+        im,
+        ax=axes[0],
+        label="Field Amplitude",
+    )
+
+    # ========================================================
+    # PANEL 2
+    # ========================================================
+
+    fidelity = [
+        x["fidelity"]
+        for x in tensor
+    ]
+
+    coherence = [
+        x["coherence"]
+        for x in tensor
+    ]
+
+    axes[1].plot(
+        fidelity,
+        linewidth=2,
+        label="Detector Fidelity",
+    )
+
+    axes[1].plot(
+        coherence,
+        linewidth=2,
+        label="Coherence",
+    )
+
+    axes[1].legend()
+
+    axes[1].grid(True)
+
+    axes[1].set_title(
+        "Memory Runtime Tensor"
+    )
+
+    # ========================================================
+    # PANEL 3
+    # ========================================================
+
+    detector_states = np.array(
+        [
+            x["detector_states"]
+            for x in tensor
+        ]
+    )
+
+    for i in range(
+        detector_states.shape[1]
+    ):
+
+        axes[2].plot(
+            detector_states[:, i],
+            linewidth=2,
+            label=f"Detector {i+1}",
+        )
+
+    axes[2].legend()
+
+    axes[2].grid(True)
+
+    axes[2].set_title(
+        "Detector States"
+    )
+
+    # ========================================================
+    # PANEL 4
+    # ========================================================
+
+    detector_memories = np.array(
+        [
+            x["detector_memories"]
+            for x in tensor
+        ]
+    )
+
+    for i in range(
+        detector_memories.shape[1]
+    ):
+
+        axes[3].plot(
+            detector_memories[:, i],
+            linewidth=2,
+            label=f"Memory {i+1}",
+        )
+
+    axes[3].legend()
+
+    axes[3].grid(True)
+
+    axes[3].set_title(
+        "Detector Memory Tensor"
+    )
+
+    plt.tight_layout()
+
+    # ========================================================
+    # SAVE
+    # ========================================================
+
+    timestamp = datetime.utcnow().strftime(
+        "%Y%m%d_%H%M%S"
+    )
+
+    artifact_dir = (
+        Path(
+            "qos/artifacts/generated/runtime"
+        )
+        / f"memory_network_{timestamp}"
+    )
+
+    artifact_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    plt.savefig(
+        artifact_dir
+        / "memory_network.png",
+        dpi=300,
+    )
+
+    with open(
+        artifact_dir
+        / "memory_network_tensor.json",
+        "w",
+    ) as f:
+
+        json.dump(
+            {
+                "runtime_tensor":
+                    tensor
+            },
+            f,
+            indent=4,
+        )
+
+    print(
+        "\n=== Memory Detector Runtime ==="
+    )
+
+    print(
+        f"Artifacts: {artifact_dir}"
+    )
+
+    plt.show()
+
+
+# ============================================================
+# MAIN
+# ============================================================
 
 def main():
 
-    parser = argparse.ArgumentParser(
-        prog="qms",
-    )
+    parser = argparse.ArgumentParser()
 
     subparsers = parser.add_subparsers(
         dest="command"
     )
 
-    # -----------------------------------
-    # RUN
-    # -----------------------------------
-
-    run_parser = subparsers.add_parser(
-        "run"
-    )
-
-    run_parser.add_argument(
-        "--profile",
-        required=True,
-    )
-
-    # -----------------------------------
-    # EVOLVE
-    # -----------------------------------
+    # ========================================================
+    # COMMANDS
+    # ========================================================
 
     subparsers.add_parser(
-        "evolve"
+        "network"
+    )
+
+    subparsers.add_parser(
+        "memory-network"
     )
 
     args = parser.parse_args()
 
-    if args.command == "run":
+    # ========================================================
+    # EXECUTION
+    # ========================================================
 
-        run_profile(
-            args.profile
-        )
+    if (
+        args.command
+        == "network"
+    ):
 
-    elif args.command == "evolve":
+        run_detector_network()
 
-        run_evolve()
+    elif (
+        args.command
+        == "memory-network"
+    ):
+
+        run_memory_network()
 
     else:
 
         parser.print_help()
 
+
+# ============================================================
+# ENTRY
+# ============================================================
 
 if __name__ == "__main__":
 

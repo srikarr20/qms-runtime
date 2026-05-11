@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+
+# Large generated media (keep originals elsewhere if needed)
+*.mp4
+*.gif
+
+# Python
+__pycache__/
+.ipynb_checkpoints/
+o
+# QMCTB generated artifacts
+qmctb/artifacts/
+*.png
+
